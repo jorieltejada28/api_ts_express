@@ -23,8 +23,18 @@ export const connectDB = async () => {
     console.log("MySQL connected successfully");
     connection.release();
     return pool;
-  } catch (error) {
-    console.error("MySQL connection failed:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("MySQL connection failed:", error.message);
+    } else {
+      console.error("MySQL connection failed:", error);
+    }
     throw error;
   }
+};
+
+// Safe getter for models
+export const getPool = (): Pool => {
+  if (!pool) throw new Error("Database not initialized. Call connectDB() first.");
+  return pool;
 };

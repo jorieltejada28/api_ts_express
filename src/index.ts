@@ -3,6 +3,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import { connectDB } from "./config/connection";
+import userRoutes from "./routes/user.route"; 
 
 dotenv.config();
 
@@ -13,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
+
+// Routes
+app.use("/api", userRoutes); // All user routes under /api
 
 // Start Server
 async function startServer() {
@@ -31,7 +35,7 @@ async function startServer() {
     } else {
       console.error("Failed to connect to the database:", error);
     }
-    process.exit(1); 
+    process.exit(1); // exit app if DB fails
   }
 }
 
