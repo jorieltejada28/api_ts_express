@@ -7,7 +7,7 @@ export class UserController {
     try {
       const user: User = req.body;
       const result = await UserModel.create(user);
-      res.status(201).json({ message: "User created successfully", id: result.insertId });
+      res.status(201).json({ message: "User created successfully" });
     } catch (error: unknown) {
       if (error instanceof Error) {
         res.status(500).json({ message: error.message });
