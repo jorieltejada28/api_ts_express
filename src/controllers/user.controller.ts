@@ -74,23 +74,32 @@ export class UserController {
     }
   }
 
-  static async getUserById(req: Request, res: Response) {
+  static async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const pool = getPool();
-      const userId = parseInt(req.params.id);
-
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Invalid user ID" });
-      }
+      const { id } = req.params;
 
       const query = "SELECT * FROM users WHERE id = ?";
-      const [rows] = await pool.query<User[] & RowDataPacket[]>(query, [userId]);
+      const [rows] = await pool.query<RowDataPacket[]>(query, [id]);
 
       if (rows.length === 0) {
-        return res.status(404).json({ message: "User not found" });
+        res.status(404).json({ message: "User not found" });
+        return;
       }
 
-      res.status(200).json(rows[0]);
+      const user = rows[0];
+
+      const secret = process.env.JWT_SECRET as string;
+      const expiresIn =
+        (process.env.JWT_EXPIRES as SignOptions["expiresIn"]) || "1h";
+
+      const payload: UserPayload = { id: user.id };
+      const token = jwt.sign(payload, secret, { expiresIn });
+
+      res.status(200).json({
+        ...user,
+        id: token,
+      });
     } catch (error: unknown) {
       if (error instanceof Error) {
         res.status(500).json({ message: error.message });
@@ -99,7 +108,6 @@ export class UserController {
       }
     }
   }
-
   // Update a user by id
   static async updateUser(req: Request, res: Response) {
     try {
