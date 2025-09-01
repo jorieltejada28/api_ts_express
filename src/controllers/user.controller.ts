@@ -6,7 +6,7 @@ import crypto from "crypto";
 
 export class UserController {
 
-  private static hashId(id: number): string {
+  public static hashId(id: number): string {
     return crypto
       .createHash("sha256")
       .update(id.toString())
@@ -78,17 +78,17 @@ export class UserController {
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const pool = getPool();
-      const { id } = req.params;
+      const { hashId } = req.params;
 
-      const query = "SELECT * FROM users WHERE id = ?";
-      const [rows] = await pool.query<RowDataPacket[]>(query, [id]);
+      const query = "SELECT * FROM users";
+      const [rows] = await pool.query<RowDataPacket[]>(query);
 
-      if (rows.length === 0) {
+      const user = (rows as any[]).find(u => UserController.hashId(u.id) === hashId);
+
+      if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
-
-      const user = rows[0];
 
       res.status(200).json({
         ...user,
@@ -102,6 +102,7 @@ export class UserController {
       }
     }
   }
+
   // Update a user by id
   static async updateUser(req: Request, res: Response) {
     try {
