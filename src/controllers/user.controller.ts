@@ -2,13 +2,18 @@ import { Request, Response } from "express";
 import { getPool } from "../config/connection";
 import { User } from "../models/User.model";
 import { RowDataPacket } from "mysql2";
-import jwt, { SignOptions } from "jsonwebtoken";
-
-interface UserPayload {
-  id: number;
-}
+import crypto from "crypto";
 
 export class UserController {
+
+  private static hashId(id: number): string {
+    return crypto
+      .createHash("sha256")
+      .update(id.toString())
+      .digest("hex")
+      .substring(0, 32); 
+  }
+
   // Create new user
   static async createUser(req: Request, res: Response) {
     try {
@@ -52,15 +57,11 @@ export class UserController {
 
       const [rows] = await pool.query<RowDataPacket[]>(query);
 
-      const secret = process.env.JWT_SECRET as string;
-      const expiresIn = (process.env.JWT_EXPIRES as SignOptions["expiresIn"]) || "1h";
-
-      // Replace user.id with JWT token
+      // Replace user.id with hashed id
       const users = rows.map((user: any) => {
-        const payload: UserPayload = { id: user.id };
         return {
           ...user,
-          id: jwt.sign(payload, secret, { expiresIn }),
+          id: UserController.hashId(user.id),
         };
       });
 
@@ -74,6 +75,7 @@ export class UserController {
     }
   }
 
+  // Get user by ID
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const pool = getPool();
@@ -89,16 +91,9 @@ export class UserController {
 
       const user = rows[0];
 
-      const secret = process.env.JWT_SECRET as string;
-      const expiresIn =
-        (process.env.JWT_EXPIRES as SignOptions["expiresIn"]) || "1h";
-
-      const payload: UserPayload = { id: user.id };
-      const token = jwt.sign(payload, secret, { expiresIn });
-
       res.status(200).json({
         ...user,
-        id: token,
+        id: UserController.hashId(user.id),
       });
     } catch (error: unknown) {
       if (error instanceof Error) {
