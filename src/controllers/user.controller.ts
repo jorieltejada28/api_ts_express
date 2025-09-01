@@ -10,8 +10,7 @@ export class UserController {
     return crypto
       .createHash("sha256")
       .update(id.toString())
-      .digest("hex")
-      .substring(0, 32); 
+      .digest("hex"); // 64-char hash
   }
 
   // Create new user
