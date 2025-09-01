@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import { getPool } from "../config/connection";
 import { User } from "../models/User.model";
 import { RowDataPacket } from "mysql2";
+import jwt, { SignOptions } from "jsonwebtoken";
+
+interface UserPayload {
+  id: number;
+}
 
 export class UserController {
   // Create new user
@@ -40,13 +45,26 @@ export class UserController {
   }
 
   // Get all users
-  static async getAllUsers(req: Request, res: Response) {
+  static async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
       const pool = getPool();
       const query = "SELECT * FROM users";
 
-      const [rows] = await pool.query(query);
-      res.status(200).json(rows);
+      const [rows] = await pool.query<RowDataPacket[]>(query);
+
+      const secret = process.env.JWT_SECRET as string;
+      const expiresIn = (process.env.JWT_EXPIRES as SignOptions["expiresIn"]) || "1h";
+
+      // Replace user.id with JWT token
+      const users = rows.map((user: any) => {
+        const payload: UserPayload = { id: user.id };
+        return {
+          ...user,
+          id: jwt.sign(payload, secret, { expiresIn }),
+        };
+      });
+
+      res.status(200).json(users);
     } catch (error: unknown) {
       if (error instanceof Error) {
         res.status(500).json({ message: error.message });
